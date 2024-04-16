@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
-import { RetellWebClient } from "./simli-retell-client-js-sdk";
+import { RetellWebClient } from "retell-client-js-sdk";
 
 const agentId = "a3cfb6d7264592344634753c976bb05c";
 
@@ -131,9 +131,9 @@ const App = () => {
         };
         ws.send(JSON.stringify(metadata));
         //send an array of 6000 zeros of uint8
-        const data = new Uint8Array(32000);
+        // const data = new Uint8Array(6000);
         setWebSocket(ws);
-        ws.send(data.buffer);
+        // ws.send(data.buffer);
       };
 
       ws.onmessage = (event) => {
@@ -170,9 +170,8 @@ const App = () => {
       // }
 
       if (webSocket && webSocket.readyState === WebSocket.OPEN) {
-        webSocket.send(audio);
-        if (audio.byteLength !== 256)
-          console.log(audio.byteLength);
+        // if (isAgentActive === true)
+          webSocket.send(audio);
         // const audioData = convertUint8ToFloat32(audio);
         // audioQueue.current.push(audioData);
       } else {
@@ -190,13 +189,20 @@ const App = () => {
       console.error("An error occurred:", error);
       setIsCalling(false);
     });
-
+    let isAgentActive = false;
     webClient.on("update", (update) => {
       setUpdateMessage(
         update.transcript[update.transcript.length - 1].role +
           ": " +
           update.transcript[update.transcript.length - 1].content
       );
+      
+      if (update.transcript[update.transcript.length - 1].role === "agent") {
+        isAgentActive = true;
+      }
+      else {
+        isAgentActive = false;
+      }
       // console.log("update:", update);
     });
 
