@@ -116,7 +116,7 @@ const App = () => {
   useEffect(() => {
     webClient.on("conversationStarted", () => {
       console.log("conversationStarted");
-      const ws = new WebSocket("ws://34.91.9.107:8892/LipsyncStream");
+      const ws = new WebSocket("ws://34.91.9.107:9090/StartCall");
       ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {
@@ -130,56 +130,17 @@ const App = () => {
           isJPG: true,
         };
         ws.send(JSON.stringify(metadata));
+        //send an array of 6000 zeros of uint8
+        const data = new Uint8Array(32000);
         setWebSocket(ws);
+        ws.send(data.buffer);
       };
 
       ws.onmessage = (event) => {
-        console.log("Received message:", event.data);
-        try {
-          const data = new Uint8Array(event.data);
-
-          // Extracting the endIndex from the message
-          const endIndex = new DataView(data.buffer.slice(5, 9)).getUint32(
-            0,
-            true
-          );
-          console.log("endIndex", endIndex);
-
-          // Extracting the video data
-          const video = data.buffer.slice(9, endIndex);
-
-          // Extracting frame metadata
-          const frameIndex = new DataView(
-            data.buffer.slice(0 + 9, 4 + 9)
-          ).getUint32(0, true);
-          const frameWidth = new DataView(
-            data.buffer.slice(4 + 9, 8 + 9)
-          ).getUint32(0, true);
-          const frameHeight = new DataView(
-            data.buffer.slice(8 + 9, 12 + 9)
-          ).getUint32(0, true);
-
-          // Extracting image data
-          const imageData = data.subarray(12 + 9, endIndex + 9);
-          console.log("Image data length:", imageData.byteLength);
-
-          // Extract Audio data
-          const audioData = data.subarray(18 + endIndex);
-          console.log("diffAudio2", audioData);
-          audioStreamed.current.push(audioData);
-          console.log("Audio data length:", audioData.byteLength);
-
-          // Convert the audio data to Float32Array and play it
-          // audioQueue.current.push(convertUint8ToFloat32(audioData));
-          // playAudioFromBufferNow(convertUint8ToFloat32(audioData));
-          console.log("AudioQueue:", audioQueue);
-
-          // Pushing the frame data into a queue
-          frameQueue.current.push({ frameWidth, frameHeight, imageData });
-
-          console.warn("");
-        } catch (e) {
-          console.error(e);
+        if (typeof event.data === "string" && event.data.startsWith("https://")) {
+          console.log("Received message:", event.data);
+          // open a new tab with the received URL
+          window.open(event.data, "_blank");
         }
       };
 
@@ -200,19 +161,18 @@ const App = () => {
       // if (audio.some((value) => value !== 128)) {
       //   console.log("audio", audio);
       // }
-      const audioData = convertUint8ToFloat32(audio);
-      audioQueue.current.push(audioData);
-      audioOriginal.current.push(audio);
-      if (!audioStarted.current && audioQueue.current.length > 0) {
-          playAudioFromBuffer();
-          audioStarted.current = true;
-      }
+      // const audioData = convertUint8ToFloat32(audio);
+      // audioQueue.current.push(audioData);
+      // audioOriginal.current.push(audio);
+      // if (!audioStarted.current && audioQueue.current.length > 0) {
+      //     playAudioFromBuffer();
+          // audioStarted.current = true;
+      // }
 
       if (webSocket && webSocket.readyState === WebSocket.OPEN) {
-        if (audio.length !== 256) {
-          console.log("diffAudio1", audio);
-        }
         webSocket.send(audio);
+        if (audio.byteLength !== 256)
+          console.log(audio.byteLength);
         // const audioData = convertUint8ToFloat32(audio);
         // audioQueue.current.push(audioData);
       } else {
