@@ -106,7 +106,7 @@ export class RetellWebClient extends EventEmitter {
     });
 
     this.liveClient.on("audio", (audio: Uint8Array) => {
-      // this.audioNode.port.postMessage(audio);
+      this.audioNode.port.postMessage(audio);
       this.emit("audio", audio);
     });
 

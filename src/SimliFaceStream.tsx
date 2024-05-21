@@ -4,7 +4,8 @@ import React, {
   useRef,
   forwardRef,
   useImperativeHandle,
-} from 'react';
+} from "react";
+import { workletCode } from "./audioWorklet.ts";
 
 interface ImageFrame {
   frameWidth: number;
@@ -27,11 +28,11 @@ interface props {
 }
 
 const SimliFaceStream = forwardRef(
-  ({ start, minimumChunkSize = 15, faceId = 'tmp9i8bbq7c' }: props, ref) => {
+  ({ start, minimumChunkSize = 15, faceId = "tmp9i8bbq7c" }: props, ref) => {
     useImperativeHandle(ref, () => ({
       sendAudioDataToLipsync,
     }));
-    SimliFaceStream.displayName = 'SimliFaceStream';
+    SimliFaceStream.displayName = "SimliFaceStream";
 
     const [ws, setWs] = useState<WebSocket | null>(null); // WebSocket connection for audio data
 
@@ -47,14 +48,14 @@ const SimliFaceStream = forwardRef(
 
     // ------------------- AUDIO -------------------
     const [audioContext, setAudioContext] = useState<AudioContext | null>(null); // AudioContest for decoding audio data
+    const [audioNode, setAudioNode] = useState<AudioWorkletNode | null>(null); // AudioNode for capturing and playing audio
     const audioQueue = useRef<Array<AudioBuffer>>([]); // Ref for audio queue
     const [audioQueueLengthState, setAudioQueueLengthState] =
       useState<number>(0); // State for audio queue length
     const accumulatedAudioBuffer = useRef<Array<Uint8Array>>([]); // Buffer for accumulating incoming data until it reaches the minimum size for decoding
 
     const audioConstant = 0.042; // Audio constant for audio playback to tweak chunking
-    const playbackDelay =
-      minimumChunkSize * (1000 / 30) ; // Playback delay for audio and video in milliseconds
+    const playbackDelay = minimumChunkSize * (1000 / 30); // Playback delay for audio and video in milliseconds
 
     // ------------------- VIDEO -------------------
     const frameQueue = useRef<Array<Array<ImageFrame>>>([]); // Queue for storing video data
@@ -75,7 +76,7 @@ const SimliFaceStream = forwardRef(
       const intervalId = setInterval(() => {
         if (start && audioQueue.current.length > 0) {
           playFrameQueue();
-          playAudioQueue();
+          // playAudioQueue();
         }
       }, playbackDelay);
 
@@ -87,14 +88,22 @@ const SimliFaceStream = forwardRef(
       // Return if start is false
       if (start === false) return;
 
-      // Initialize AudioContext
-      const newAudioContext = new AudioContext();
-      setAudioContext(newAudioContext);
+      const stream = navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1,
+        },
+      });
+
+      // Initialize AudioContext and AudioNode
+      setupAudio();
 
       // Intialize VideoContext
       const videoCanvas = canvasRef.current;
       if (videoCanvas) {
-        setVideoContext(videoCanvas?.getContext('2d'));
+        setVideoContext(videoCanvas?.getContext("2d"));
       }
     }, [start]);
 
@@ -105,17 +114,54 @@ const SimliFaceStream = forwardRef(
       }
     };
 
+    const setupAudio = async () => {
+      const newAudioContext = new AudioContext({ sampleRate: 16000 });
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+            channelCount: 1,
+          },
+        });
+      } catch (error) {
+        throw new Error("User didn't give microphone permission");
+      }
+
+      console.log("Simli Audio worklet starting");
+      newAudioContext.resume();
+      const blob = new Blob([workletCode], { type: "application/javascript" });
+      const blobURL = URL.createObjectURL(blob);
+      await newAudioContext.audioWorklet.addModule(blobURL);
+      console.log("Simli Audio worklet loaded");
+      const newAudioNode = new AudioWorkletNode(
+        newAudioContext,
+        "capture-and-playback-processor"
+      );
+      console.log("Simli Audio worklet setup");
+
+      const source = newAudioContext.createMediaStreamSource(stream);
+      source.connect(newAudioNode);
+      newAudioNode.connect(newAudioContext.destination);
+
+      setAudioNode(newAudioNode);
+      setAudioContext(newAudioContext);
+    };
+
     /* Connect with Lipsync stream */
     useEffect(() => {
       // Return if start is false
       if (start === false) return;
 
-      const ws_lipsync = new WebSocket('wss://api.simli.ai/LipsyncStream');
-      ws_lipsync.binaryType = 'arraybuffer';
+      const ws_lipsync = new WebSocket("wss://api.simli.ai/LipsyncStream");
+      ws_lipsync.binaryType = "arraybuffer";
       setWs(ws_lipsync);
 
       ws_lipsync.onopen = () => {
-        console.log('Connected to lipsync server');
+        console.log("Connected to lipsync server");
 
         const metadata = {
           video_reference_url: `https://storage.googleapis.com/charactervideos/${faceId}/${faceId}.mp4`,
@@ -143,14 +189,14 @@ const SimliFaceStream = forwardRef(
 
         return () => {
           if (ws) {
-            console.error('Closing Lipsync WebSocket');
+            console.error("Closing Lipsync WebSocket");
             ws.close();
           }
         };
       };
 
       return () => {
-        console.error('Closing Lipsync WebSocket');
+        console.error("Closing Lipsync WebSocket");
         ws_lipsync.close();
       };
     }, [audioContext]);
@@ -193,11 +239,15 @@ const SimliFaceStream = forwardRef(
       // Extract Audio data
       const audioData = data.subarray(endIndex + 18);
 
+      // playback
+      console.log("Simli audioData length: ", audioData);
+      // audioNode?.port.postMessage(audioData);
+
       // Push audio data to audio queue
       updateAudioQueue(audioData);
       setAudioQueueLengthState(audioQueue.current.length);
 
-      console.log('Received chunk from Lipsync');
+      console.log("Received chunk from Lipsync");
 
       // --------------- LOGGING ----------------
 
@@ -262,7 +312,7 @@ const SimliFaceStream = forwardRef(
     /* Decode ArrayBuffer data to Audio and push to audio queue */
     const updateAudioQueue = async (data: ArrayBuffer) => {
       if (currentChunkSize.current >= minimumChunkSize) {
-        console.log('--------- CHUNK SIZE REACHED', currentChunkSize);
+        console.log("--------- CHUNK SIZE REACHED", currentChunkSize);
 
         // 1: Concatenate Uint8Arrays into a single Uint8Array
         const accumulatedAudioBufferTotalByteLength =
@@ -283,8 +333,9 @@ const SimliFaceStream = forwardRef(
         accumulatedAudioBuffer.current = [];
 
         // 3: Decode concatenated data as PCM16 audio
-        const decodedAudioData =
-          await createAudioBufferFromPCM16(concatenatedData);
+        const decodedAudioData = await createAudioBufferFromPCM16(
+          concatenatedData
+        );
 
         // 4: Push decoded audio data to the queue
         audioQueue.current.push(decodedAudioData);
@@ -305,7 +356,7 @@ const SimliFaceStream = forwardRef(
       input: Uint8Array
     ): Promise<AudioBuffer> {
       // Ensure the input byte length is even
-      if (input.length % 2 !== 0) throw new Error('Input length must be even');
+      if (input.length % 2 !== 0) throw new Error("Input length must be even");
 
       const numSamples = input.length / 2;
       const audioBuffer = audioContext!.createBuffer(1, numSamples, 16000);
@@ -334,9 +385,9 @@ const SimliFaceStream = forwardRef(
       executionTime.current = performance.now() - startTime.current;
       setChunkCollectionTime(executionTime.current);
       console.log(
-        'Chunk collection time:',
+        "Chunk collection time:",
         executionTime.current / 1000,
-        'seconds'
+        "seconds"
       );
       startTime.current = null;
       executionTime.current = 0;
@@ -352,7 +403,7 @@ const SimliFaceStream = forwardRef(
       return audioBuffer!.duration;
     }
 
-    return <canvas ref={canvasRef} width='512' height='512'></canvas>;
+    return <canvas ref={canvasRef} width="512" height="512"></canvas>;
   }
 );
 

@@ -196,7 +196,8 @@ var a = /*#__PURE__*/ (function (e) {
         e.emit("conversationStarted");
       }),
         this.liveClient.on("audio", function (t) {
-        //   e.audioNode.port.postMessage(t);
+          console.log("Retell audioData length: ", t);
+          e.audioNode.port.postMessage(t);
           e.emit("audio", t);
         }),
         this.liveClient.on("error", function (t) {
