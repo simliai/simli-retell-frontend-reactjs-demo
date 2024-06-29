@@ -5,7 +5,7 @@ const Retell = require('retell-sdk');
 require('dotenv').config();
 
 const app = express();
-const port = 8080;
+const port = 8088;
 
 app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());

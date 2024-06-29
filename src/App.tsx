@@ -5,14 +5,14 @@ import SimliFaceStream from "./SimliFaceStream/SimliFaceStream";
 
 // Retell agent ID
 // You can get your agent ID from the Retell dashboard: https://beta.retellai.com/dashboard
-const agentId = "YOUR-RETELL-AGENT-ID";
+const agentId = "8ab026b77c2aa86b74888cffeb48cd7f";
 
 // Simli face ID
 // Get all the available face IDs: https://docs.simli.com/api-reference/endpoint/getPossibleFaceIDs
-const faceId = "tmp9i8bbq7c"; 
+const faceId = "f8e6af3a-8b97-496b-8d90-1e3addecc41b"; 
 
 interface RegisterCallResponse {
-  callId?: string;
+  callId?: string;  
   sampleRate: number;
 }
 
@@ -70,7 +70,7 @@ const App = () => {
   async function registerCall(agentId: string): Promise<RegisterCallResponse> {
     try {
       const response = await fetch(
-        "http://localhost:8080/register-call-on-your-server",
+        "http://localhost:8088/register-call-on-your-server",
         {
           method: "POST",
           headers: {
