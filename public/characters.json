@@ -1,0 +1,24 @@
+[
+    {
+      "id": "cleopatra",
+      "name": "Cleopatra",
+      "agentId": "b0fa46c4130892451d49cb4c916b869d",
+      "faceId": "3dafda97-4bd6-4948-9404-5fa63c155b58",
+      "image": "/characters/Cleo_SR.jpg"
+    },
+    {
+      "id": "julius_caesar",
+      "name": "Julius Caesar",
+      "agentId": "8ab026b77c2aa86b74888cffeb48cd7f",
+      "faceId": "7c5d6255-6213-4cf0-99aa-fcc01f8726a1",
+      "image": "/characters/Julius_SR.jpg"
+    },
+    {
+      "id": "confucius",
+      "name": "Confucius",
+      "agentId": "4cef335d75f388b5a2686b2570bd2009",
+      "faceId": "f8e6af3a-8b97-496b-8d90-1e3addecc41b",
+      "image": "/characters/Confucius_SR.jpg"
+    }
+  ]
+  

@@ -3,29 +3,24 @@ import "./App.css";
 import { RetellWebClient } from "simli-retell-client-js-sdk";
 import SimliFaceStream from "./SimliFaceStream/SimliFaceStream";
 
-// Retell agent ID
-// You can get your agent ID from the Retell dashboard: https://beta.retellai.com/dashboard
-const agentId = "8ab026b77c2aa86b74888cffeb48cd7f";
-
-// Simli face ID
-// Get all the available face IDs: https://docs.simli.com/api-reference/endpoint/getPossibleFaceIDs
-const faceId = "f8e6af3a-8b97-496b-8d90-1e3addecc41b"; 
-
-interface RegisterCallResponse {
-  callId?: string;  
-  sampleRate: number;
-}
-
 const webClient = new RetellWebClient();
 
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
   const [minimumChunkSize, setMinimumChunkSize] = useState(15);
   const [simliSessionToken, setSimliSessionToken] = useState(null);
+  const [characters, setCharacters] = useState([]);
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [topic, setTopic] = useState("");
   const simliFaceStreamRef = useRef(null);
 
   useEffect(() => {
-    webClient.on("audio", (audio: Uint8Array) => {
+    fetch('/characters.json')
+      .then(response => response.json())
+      .then(data => setCharacters(data))
+      .catch(error => console.error("Error fetching characters:", error));
+
+    webClient.on("audio", (audio) => {
       if (simliFaceStreamRef.current) {
         simliFaceStreamRef.current.sendAudioDataToLipsync(audio);
       }
@@ -45,10 +40,43 @@ const App = () => {
     webClient.on("update", (update) => console.log("update", update));
   }, []);
 
+  const changeCharacter = async (characterId, topic) => {
+    try {
+      const response = await fetch(`http://localhost:8080/change-character/${characterId}?topic=${encodeURIComponent(topic)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(data.message);
+    } catch (error) {
+      console.error("Error changing character:", error);
+    }
+  };
+
   const toggleConversation = async () => {
+    if (!selectedCharacter) {
+      alert("Please select a character first");
+      return;
+    }
+
+    const { agentId, faceId, id } = selectedCharacter;
+
+    if (!topic) {
+      alert("Please enter a topic");
+      return;
+    }
+
     if (isCalling) {
       webClient.stopConversation();
     } else {
+      await changeCharacter(id, topic);  // Change character on start
       const simliSessionResponse = await startAudioToVideoSession(faceId);
       setSimliSessionToken(simliSessionResponse.session_token);
       console.log("Simli session token", simliSessionResponse.session_token);
@@ -67,7 +95,7 @@ const App = () => {
     }
   };
 
-  async function registerCall(agentId: string): Promise<RegisterCallResponse> {
+  async function registerCall(agentId) {
     try {
       const response = await fetch(
         "http://localhost:8088/register-call-on-your-server",
@@ -92,9 +120,9 @@ const App = () => {
   }
 
   const startAudioToVideoSession = async (
-    faceId: string,
-    isJPG: Boolean = true,
-    syncAudio: Boolean = true
+    faceId,
+    isJPG = true,
+    syncAudio = true
   ) => {
     const metadata = {
       faceId: faceId,
@@ -120,6 +148,18 @@ const App = () => {
   return (
     <div className="App">
       <header className="App-header">
+        <div className="character-selection">
+          {characters.map((character) => (
+            <div
+              key={character.id}
+              className={`character-card ${selectedCharacter?.id === character.id ? 'selected' : ''}`}
+              onClick={() => setSelectedCharacter(character)}  // Just set selected character
+            >
+              <img src={character.image} alt={character.name} />
+              <h3>{character.name}</h3>
+            </div>
+          ))}
+        </div>
         <SimliFaceStream
           ref={simliFaceStreamRef}
           start={isCalling}
@@ -127,7 +167,14 @@ const App = () => {
           minimumChunkSize={minimumChunkSize}
         />
         <br />
-        <button onClick={toggleConversation}>
+        <input
+          type="text"
+          placeholder={`What do you want to talk with ${selectedCharacter?.name} about?`}
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          className="topic-input"
+        />
+        <button className="conversation-button" onClick={toggleConversation}>
           {isCalling ? "Stop" : "Start"}
         </button>
       </header>
