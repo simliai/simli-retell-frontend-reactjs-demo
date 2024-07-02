@@ -1,4 +1,4 @@
-# Simli Retell Frontend Demo (React/Node.js)
+# Simli Retell Historical Characters Demo (React/Node.js)
 
 This repository uses voice agents from [RetellAI](https://www.retellai.com) and video avatars from [Simli](https://www.simli.com). You will need an API key from both providers to run this demo.
 
