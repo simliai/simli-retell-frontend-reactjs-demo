@@ -18,7 +18,7 @@ REACT_APP_SIMLI_KEY="YOUR-SIMLI-API-KEY"
 REACT_APP_RETELL_KEY="YOUR-RETELL-API-KEY"
 ```
 
-### Step 2: Update `agentID`, and possibly the `FaceID` in the `characters.json` file
+### Step 2: Update `agentID`, and possibly the `FaceID` in the `characters.json` file located at public/characters.json
 ```json
 {
   "id": "cleopatra",
