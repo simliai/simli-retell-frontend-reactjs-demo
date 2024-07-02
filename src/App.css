@@ -124,3 +124,13 @@
   background-color: #00cc00;
   transform: scale(1.05);
 }
+.topic-input {
+  background: #1e1e1e;
+  color: white;
+  border: none;
+  padding: 20px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  width: 100%;
+  font-size: 16px;
+}

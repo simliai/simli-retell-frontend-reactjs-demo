@@ -2,6 +2,14 @@
 
 This repository uses voice agents from [RetellAI](https://www.retellai.com) and video avatars from [Simli](https://www.simli.com). You will need an API key from both providers to run this demo.
 
+
+
+## Video of the demo
+
+[![Watch the video](https://img.youtube.com/vi/zpm_bCGtG6Y/maxresdefault.jpg)](https://www.youtube.com/watch?v=zpm_bCGtG6Y)
+
+
+
 ## Run this Demo
 
 ### Step 1: Create .env file in the root directory
